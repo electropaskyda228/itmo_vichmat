@@ -113,7 +113,7 @@ func chooseIntegral(in *bufio.Reader, I *integral) {
 
 func chooseInftyIntegral(in *bufio.Reader, I *integral) float64 {
 	fmt.Println("Выберите функцию, несобственный интеграл которой вы хотите вычислить:")
-	fmt.Print(" 1) 1/sqrt(x) на [0; 2]\n 2) 1/(1-x) на [0; 1]\n 3) 1/x^3 на [-2; 3]\n Enter: ")
+	fmt.Print(" 1) 1/sqrt(x) на [0; 2]\n 2) 1/(1-x) на [0; 1]\n 3) 1/x^3 на [-3; 3]\n Enter: ")
 	var option int
 	ReadInt(in, &option, true)
 
@@ -121,23 +121,43 @@ func chooseInftyIntegral(in *bufio.Reader, I *integral) float64 {
 		I.f = func(x float64) float64 {
 			return 1 / math.Sqrt(x)
 		}
-		I.a = 1
+		I.a = 0
 		I.b = 2
-		return 2
-	} else if option == 2 {
-		I.f = nil
 		return 0
+	} else if option == 2 {
+		I.f = func(x float64) float64 {
+			return 1 / (1 - x)
+		}
+		I.a = 0
+		I.b = 1
+		return 1
 	} else if option == 3 {
 		I.f = func(x float64) float64 {
 			return 1 / (x * x * x)
 		}
-		I.a = 2
+		I.a = -3
 		I.b = 3
 		return 0
 	} else {
 		GetOut(OptionError{})
 	}
 	return 0
+}
+
+func solveWithRungeNon(I integral, f func(I integral, n int) float64, number float64) (float64, int) {
+	var sum1, sum2 float64 = 0, 0
+	var itera1, itera2 int = 0, 0
+	if number != I.a {
+		I_new := I
+		I_new.b = number - I.accuracy/4
+		sum1, itera1 = solveWithRunge(I_new, f)
+	}
+	if number != I.b {
+		I_new := I
+		I_new.a = number + I.accuracy/4
+		sum2, itera2 = solveWithRunge(I_new, f)
+	}
+	return sum1 + sum2, max(itera1, itera2)
 }
 
 func SolveIntegral(in *bufio.Reader, out *bufio.Writer) {
@@ -175,7 +195,7 @@ func SolveIntegral(in *bufio.Reader, out *bufio.Writer) {
 func SolveInftyIntegral(in *bufio.Reader, out *bufio.Writer) {
 	I := integral{nil, 2, 4, 0.001}
 
-	var toAdd float64 = chooseInftyIntegral(in, &I)
+	var bad float64 = chooseInftyIntegral(in, &I)
 	if I.f == nil {
 		GetOut(IntegralError{})
 	}
@@ -185,7 +205,7 @@ func SolveInftyIntegral(in *bufio.Reader, out *bufio.Writer) {
 	ReadFloat(in, &epsilon, true, "accuracy is incorrect")
 	I.accuracy = epsilon
 
-	answer, itera := solveWithRunge(I, methodSimpson)
-	fmt.Fprintln(out, "Ответ:", answer+toAdd, "  количество разбиений отрезка:", itera)
+	answer, itera := solveWithRungeNon(I, methodSimpson, bad)
+	fmt.Fprintln(out, "Ответ:", answer, "  количество разбиений отрезка:", itera)
 
 }
